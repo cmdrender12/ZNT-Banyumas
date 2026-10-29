@@ -50,3 +50,10 @@ FITUR VISUALISASI SBR PADA PETA
 - SBR dihitung dari nilai sampel valid di dalam zona: SD sampel (pembagi n-1) dibagi nilai absolut rata-rata, lalu dikali 100%.
 - Zona memerlukan minimal dua nilai sampel valid dan rata-rata tidak boleh nol agar SBR dapat dihitung. Klik zona untuk melihat nilai dan kategori SBR.
 - Pilihan mode ini hanya mengubah pewarnaan/visualisasi peta; tidak mengubah data sampel, target zona, maupun perhitungan ketercapaian.
+
+
+PERBAIKAN IMPOR ATRIBUT ZONA (2026-10-29)
+- Deteksi kolom ID zona memprioritaskan nama kolom ID/kode zona, bukan kolom pertama secara otomatis.
+- Dropdown nama surveyor diisi saat GeoJSON dimuat dan kolom surveyor yang dikenali dipilih otomatis.
+- Jika kolom ID tidak dapat dikenali, impor memberi pesan agar skema atribut diperiksa. Tetap periksa dropdown ID zona dan surveyor sebelum data disimpan.
+- Fitur input menerima GeoJSON (.geojson/.json), bukan file ZIP SHP langsung. Konversikan SHP menjadi GeoJSON terlebih dahulu.
