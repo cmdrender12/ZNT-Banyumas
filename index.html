@@ -280,10 +280,19 @@ $('zoneFile').addEventListener('change',async e=>{
   if(!features.length) throw new Error('Tidak ditemukan geometri Polygon/MultiPolygon. Pastikan GeoJSON zona berupa poligon, bukan titik atau garis.');
   const keys=[...new Set(features.flatMap(f=>Object.keys(f.properties||{})))];
   if(!keys.length) throw new Error('GeoJSON tidak memiliki kolom atribut. Tambahkan atribut ID zona yang unik.');
+  // Pisahkan deteksi kolom ID zona dan nama surveyor agar kolom pertama
+  // tidak otomatis dianggap sebagai ID ketika skema atribut berbeda.
   $('zoneIdField').innerHTML=keys.map(k=>`<option value="${escapeHtml(k)}">${escapeHtml(k)}</option>`).join('');
-  const likely=keys.find(k=>/^(id_zona|idzona|no_zona|zona|id|kode_zona|kode)$/i.test(k))||keys[0];
+  const normalizedKey=k=>norm(k).replace(/[^a-z0-9]/g,'');
+  const idPriority=['idzona','nozona','nomorzona','kodezona','zonaid','zoneid','idzone','kode','id'];
+  const likely=idPriority.map(want=>keys.find(k=>normalizedKey(k)===want)).find(Boolean)
+    || keys.find(k=>/(^|)(idzona|nozona|nomorzona|kodezona|zonaid|zoneid|idzone)(|$)/i.test(normalizedKey(k)))
+    || keys.find(k=>!/(surveyor|petugas|pelaksana|namaorang)/i.test(normalizedKey(k)) && features.every(f=>f.properties?.[k]!==undefined && f.properties?.[k]!==null && String(f.properties[k]).trim()!==''));
+  if(!likely) throw new Error('Kolom ID zona tidak terdeteksi. Pilih kolom ID zona yang unik pada dropdown.');
+  const surveyorLikely=findSurveyorKey(keys);
+  setupSurveyorField(keys,surveyorLikely);
   $('zoneIdField').value=likely;
-  loadZones(features,likely);
+  loadZones(features,likely,surveyorLikely);
   $('zoneIdField').dataset.keys=JSON.stringify(keys);
   notice(`GeoJSON terbaca: ${features.length} poligon. Sedang menyimpan ke Supabase...`);
   const savedCount=await syncZonesToCloud();
@@ -293,7 +302,7 @@ $('zoneFile').addEventListener('change',async e=>{
   notice('Gagal mengimpor/menyimpan GeoJSON: '+(err.message||String(err)));
  }
 });
-function findSurveyorKey(keys){return keys.find(k=>/^(nama_?surveyor|surveyor|nama_petugas|petugas|pelaksana)$/i.test(norm(k)))||keys.find(k=>/survey|petugas|pelaksana/i.test(k))||''}
+function findSurveyorKey(keys){return keys.find(k=>/^(namasurveyor|surveyor|namapetugas|petugas|pelaksana)$/i.test(norm(k)))||keys.find(k=>/survey|petugas|pelaksana/i.test(k))||''}
 function setupSurveyorField(keys,preferred=''){
  const sel=$('zoneSurveyorField');sel.innerHTML='<option value="">— Tidak menggunakan kolom surveyor —</option>'+keys.map(k=>`<option value="${escapeHtml(k)}">${escapeHtml(k)}</option>`).join('');
  const chosen=preferred&&keys.includes(preferred)?preferred:findSurveyorKey(keys);
