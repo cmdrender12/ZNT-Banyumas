@@ -52,8 +52,22 @@ FITUR VISUALISASI SBR PADA PETA
 - Pilihan mode ini hanya mengubah pewarnaan/visualisasi peta; tidak mengubah data sampel, target zona, maupun perhitungan ketercapaian.
 
 
-PERBAIKAN IMPOR ATRIBUT ZONA (2026-10-29)
-- Deteksi kolom ID zona memprioritaskan nama kolom ID/kode zona, bukan kolom pertama secara otomatis.
-- Dropdown nama surveyor diisi saat GeoJSON dimuat dan kolom surveyor yang dikenali dipilih otomatis.
-- Jika kolom ID tidak dapat dikenali, impor memberi pesan agar skema atribut diperiksa. Tetap periksa dropdown ID zona dan surveyor sebelum data disimpan.
-- Fitur input menerima GeoJSON (.geojson/.json), bukan file ZIP SHP langsung. Konversikan SHP menjadi GeoJSON terlebih dahulu.
+OPTIMASI KINERJA (VERSI 9)
+- Pembacaan GeoJSON dari Supabase dilakukan per 25 zona per halaman agar respons tidak terlalu besar.
+- Pembacaan sampel dilakukan bertahap (pagination) dan memiliki retry bertingkat untuk gangguan jaringan/timeout sementara.
+- Pencocokan titik ke poligon memakai bounding box dan indeks grid spasial di browser, sehingga tidak perlu menguji setiap titik terhadap semua geometri secara penuh.
+- Nilai SBR dan kumpulan nilai sampel per zona dihitung sekali pada proses spatial join dan digunakan kembali oleh tabel/legenda.
+- Pembuatan marker peta dilakukan bertahap per 1.200 sampel agar UI tidak membeku saat jumlah titik besar.
+- SUPABASE_SETUP.sql menambahkan indeks untuk tanggal sampel, surveyor, dan kombinasi tanggal-surveyor. Jalankan ulang SQL tersebut untuk membuat indeks.
+
+CATATAN SKALA DATA
+Versi ini tetap mengunduh seluruh baris zona dan sampel ke browser karena analisis point-in-polygon masih dilakukan di sisi klien dan skema saat ini menyimpan GeoJSON sebagai JSONB per zona. Untuk data yang sangat besar (ratusan ribu sampel atau poligon sangat kompleks), solusi jangka panjang yang lebih kuat adalah menyimpan geometri dalam kolom PostGIS geometry, membuat spatial index GiST, dan memindahkan point-in-polygon serta agregasi ke RPC/View di Supabase. Optimasi browser ini mengurangi beban, tetapi tidak menghilangkan batas memori/browser atau ukuran respons jaringan.
+
+PEMBARUAN VERSI 10
+- Admin Mode memiliki Clear Zona dan Clear Sampel secara terpisah.
+- Penghapusan memeriksa sesi dan keanggotaan znt_admins, menampilkan jumlah data, meminta frasa konfirmasi, dan menghapus dalam batch. Clear Zona tidak menghapus sampel; Clear Sampel tidak menghapus zona.
+- Notifikasi proses sekarang menetap sampai diganti status berikutnya (tidak menghilang otomatis). Proses impor/pemuatan menampilkan progres.
+- Rekapitulasi memiliki filter SBR <25% dan SBR >=25%, indikator jumlah zona yang sedang ditampilkan, serta tombol filter aktif berwarna biru.
+- SQL setup sebelumnya sudah memiliki policy DELETE khusus admin untuk kedua tabel; tidak diperlukan service_role key di browser.
+
+PENTING: Clear Data adalah penghapusan permanen pada Supabase. Pastikan backup tersedia sebelum menjalankan. Fitur membutuhkan policy RLS dan akun terdaftar di public.znt_admins. Jangan memasukkan service_role/secret key ke index.html.
